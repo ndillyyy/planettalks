@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlanetTalks — One Planet. Our Responsibility.</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --green-deep: #1a3a1f; --green-mid: #2d6a34; --green-light: #4a9e55; --green-pale: #e8f5e2;
+    --earth-dark: #3b2a1a; --earth-mid: #7a5c3c; --earth-light: #c8a97a; --earth-pale: #faf3e8;
+    --cream: #fdfaf4; --warm-white: #f8f4ed; --text-dark: #1e1a14; --text-mid: #4a3f30; --text-light: #8a7a64;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-dark); overflow-x: hidden; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 1rem 2.5rem; background: rgba(253,250,244,0.92); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(74,158,85,0.15); transition: box-shadow 0.3s; }
+  nav.scrolled { box-shadow: 0 2px 20px rgba(26,58,31,0.08); }
+  .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--green-deep); letter-spacing: -0.5px; text-decoration: none; }
+  .nav-logo span { color: var(--green-light); }
+  .nav-links { display: flex; gap: 2rem; list-style: none; align-items: center; }
+  .nav-links a { text-decoration: none; font-size: 0.9rem; font-weight: 500; color: var(--text-mid); transition: color 0.2s; }
+  .nav-links a:hover { color: var(--green-mid); }
+  .nav-cta { background: var(--green-mid) !important; color: white !important; padding: 0.5rem 1.25rem !important; border-radius: 2rem; }
+  .nav-cta:hover { background: var(--green-deep) !important; }
+  .nav-hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--green-deep); border-radius: 2px; }
+  .nav-mobile { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: rgba(253,250,244,0.97); padding: 1rem 1.25rem; gap: 0.75rem; border-bottom: 1px solid rgba(74,158,85,0.12); }
+  .nav-mobile.open { display: flex; }
+  .nav-mobile a { font-size: 0.95rem; font-weight: 500; color: var(--text-mid); text-decoration: none; padding: 0.4rem 0; }
+
+  .hero { min-height: 100vh; display: flex; align-items: center; position: relative; overflow: hidden; background: var(--green-deep); padding: 8rem 2.5rem 5rem; }
+  .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 50%, rgba(74,158,85,0.2) 0%, transparent 60%), radial-gradient(ellipse at 10% 80%, rgba(201,149,43,0.12) 0%, transparent 50%); }
+  .hero-circles { position: absolute; right: -120px; top: 50%; transform: translateY(-50%); width: 600px; height: 600px; border-radius: 50%; border: 1px solid rgba(74,158,85,0.18); }
+  .hero-circles::before { content: ''; position: absolute; inset: 60px; border-radius: 50%; border: 1px solid rgba(74,158,85,0.12); }
+  .hero-circles::after { content: ''; position: absolute; inset: 120px; border-radius: 50%; background: rgba(74,158,85,0.06); border: 1px solid rgba(74,158,85,0.1); }
+  .hero-content { position: relative; max-width: 640px; z-index: 2; }
+  .hero-tag { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(74,158,85,0.18); border: 1px solid rgba(74,158,85,0.28); color: #a8d8a8; font-size: 0.78rem; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; padding: 0.35rem 1rem; border-radius: 2rem; margin-bottom: 1.5rem; }
+  .hero-dot { width: 6px; height: 6px; background: var(--green-light); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1;transform:scale(1); } 50% { opacity:0.5;transform:scale(0.8); } }
+  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.8rem,6vw,4.5rem); font-weight: 700; line-height: 1.1; color: var(--cream); margin-bottom: 1.5rem; }
+  .hero h1 em { font-style: italic; color: var(--green-light); }
+  .hero > .hero-content > p { font-size: 1.05rem; line-height: 1.75; color: rgba(253,250,244,0.68); margin-bottom: 2.5rem; max-width: 500px; }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .btn-primary { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--green-light); color: white; padding: 0.85rem 2rem; border-radius: 2rem; font-size: 0.95rem; font-weight: 500; text-decoration: none; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: background 0.2s, transform 0.15s; }
+  .btn-primary:hover { background: #3d8a47; transform: translateY(-1px); }
+  .btn-secondary { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: rgba(253,250,244,0.82); padding: 0.85rem 2rem; border-radius: 2rem; font-size: 0.95rem; font-weight: 500; text-decoration: none; cursor: pointer; border: 1px solid rgba(253,250,244,0.22); font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, background 0.2s; }
+  .btn-secondary:hover { border-color: rgba(253,250,244,0.45); background: rgba(253,250,244,0.05); }
+  .hero-stats { display: flex; gap: 2.5rem; margin-top: 4rem; padding-top: 2rem; border-top: 1px solid rgba(253,250,244,0.1); }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: var(--green-light); }
+  .stat-label { font-size: 0.78rem; color: rgba(253,250,244,0.45); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.2rem; }
+
+  section { padding: 5rem 2.5rem; }
+  .section-tag { display: inline-block; font-size: 0.75rem; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green-mid); margin-bottom: 0.6rem; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: clamp(2rem,4vw,2.8rem); font-weight: 700; line-height: 1.2; color: var(--green-deep); margin-bottom: 0.75rem; }
+  .section-sub { font-size: 1rem; color: var(--text-light); line-height: 1.75; max-width: 560px; margin-bottom: 3rem; }
+
+  .features { background: var(--warm-white); }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 1.5rem; }
+  .feature-card { background: white; border: 1px solid rgba(45,106,52,0.1); border-radius: 16px; padding: 2rem; transition: transform 0.2s, box-shadow 0.2s; }
+  .feature-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(26,58,31,0.07); }
+  .feature-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 1.4rem; }
+  .icon-green { background: var(--green-pale); } .icon-earth { background: #fdf0dc; } .icon-rust { background: #fde8dc; }
+  .feature-card h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 600; color: var(--green-deep); margin-bottom: 0.5rem; }
+  .feature-card p { font-size: 0.88rem; color: var(--text-light); line-height: 1.7; }
+
+  .news { background: var(--cream); }
+  .news-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 1.5rem; }
+  .news-card { border: 1px solid rgba(45,106,52,0.1); border-radius: 16px; overflow: hidden; background: white; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+  .news-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(26,58,31,0.07); }
+  .news-img { height: 160px; display: flex; align-items: flex-end; padding: 1rem; }
+  .news-img-1 { background: linear-gradient(135deg,#1a4a20,#2d6a34,#4a9e55); }
+  .news-img-2 { background: linear-gradient(135deg,#3b2a1a,#7a5c3c,#c8a97a); }
+  .news-img-3 { background: linear-gradient(135deg,#1a3a3f,#2d6a65,#4a9e98); }
+  .news-cat { background: rgba(255,255,255,0.18); color: white; font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 2rem; border: 1px solid rgba(255,255,255,0.28); font-weight: 500; }
+  .news-body { padding: 1.25rem; }
+  .news-body h4 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; color: var(--green-deep); margin-bottom: 0.45rem; line-height: 1.4; }
+  .news-body p { font-size: 0.84rem; color: var(--text-light); line-height: 1.65; margin-bottom: 1rem; }
+  .news-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-light); }
+  .news-read { color: var(--green-mid); font-weight: 500; text-decoration: none; }
+
+  .community { background: var(--green-deep); position: relative; overflow: hidden; }
+  .community-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 80% 20%, rgba(74,158,85,0.18) 0%, transparent 55%); }
+  .community .section-title { color: var(--cream); }
+  .community .section-tag { color: var(--green-light); }
+  .community .section-sub { color: rgba(253,250,244,0.55); }
+  .discuss-zone { position: relative; z-index: 1; }
+  .discuss-form { background: rgba(255,255,255,0.05); border: 1px solid rgba(74,158,85,0.22); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .discuss-form-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .discuss-input { flex: 1; min-width: 140px; background: rgba(255,255,255,0.07); border: 1px solid rgba(74,158,85,0.22); border-radius: 8px; padding: 0.65rem 0.9rem; color: #fdfaf4; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+  .discuss-input::placeholder { color: rgba(253,250,244,0.28); }
+  .discuss-input:focus { border-color: rgba(74,158,85,0.55); }
+  .discuss-textarea { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(74,158,85,0.22); border-radius: 8px; padding: 0.65rem 0.9rem; color: #fdfaf4; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; resize: vertical; min-height: 68px; transition: border-color 0.2s; }
+  .discuss-textarea::placeholder { color: rgba(253,250,244,0.28); }
+  .discuss-textarea:focus { border-color: rgba(74,158,85,0.55); }
+  .discuss-select { background: rgba(255,255,255,0.07); border: 1px solid rgba(74,158,85,0.22); border-radius: 8px; padding: 0.65rem 0.9rem; color: rgba(253,250,244,0.72); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; cursor: pointer; }
+  .discuss-select option { background: #1a3a1f; color: #fdfaf4; }
+  .discuss-submit { background: var(--green-light); color: white; border: none; border-radius: 8px; padding: 0.65rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+  .discuss-submit:hover { background: var(--green-mid); }
+  .discuss-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .discuss-count { font-size: 0.78rem; color: rgba(253,250,244,0.35); margin-bottom: 0.75rem; }
+  .discuss-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .discuss-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(74,158,85,0.16); border-radius: 12px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; transition: background 0.2s, border-color 0.2s; }
+  .discuss-item:hover { background: rgba(255,255,255,0.07); border-color: rgba(74,158,85,0.32); }
+  .discuss-item.new-post { border-color: rgba(74,158,85,0.5); animation: fadeSlide 0.4s ease; }
+  @keyframes fadeSlide { from { opacity:0;transform:translateY(-8px); } to { opacity:1;transform:translateY(0); } }
+  .discuss-left { display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 0; }
+  .discuss-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; flex-shrink: 0; }
+  .av-a { background: rgba(74,158,85,0.28); color: #a8d8a8; }
+  .av-b { background: rgba(201,149,43,0.28); color: #e8c878; }
+  .av-c { background: rgba(184,92,42,0.28); color: #e8a878; }
+  .av-d { background: rgba(45,106,52,0.38); color: #8fd89f; }
+  .av-you { background: rgba(74,158,85,0.45); color: #c8f8c8; }
+  .discuss-text h5 { font-size: 0.9rem; font-weight: 500; color: rgba(253,250,244,0.9); margin: 0 0 0.2rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(400px,52vw); }
+  .discuss-text .meta { font-size: 0.72rem; color: rgba(253,250,244,0.35); }
+  .cat-badge { display: inline-block; font-size: 0.65rem; letter-spacing: 0.4px; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 2rem; border: 1px solid rgba(74,158,85,0.28); color: #7ac87a; margin-left: 0.4rem; }
+  .discuss-right { display: flex; align-items: center; gap: 1.25rem; flex-shrink: 0; }
+  .discuss-stat .num { font-size: 0.88rem; font-weight: 500; color: var(--green-light); text-align: center; }
+  .discuss-stat .lbl { font-size: 0.64rem; color: rgba(253,250,244,0.28); text-transform: uppercase; letter-spacing: 0.5px; }
+  .like-btn { background: none; border: 1px solid rgba(74,158,85,0.22); border-radius: 6px; padding: 0.28rem 0.65rem; color: rgba(253,250,244,0.4); font-size: 0.78rem; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 4px; }
+  .like-btn:hover { border-color: rgba(74,158,85,0.48); color: var(--green-light); }
+  .like-btn.liked { background: rgba(74,158,85,0.14); border-color: rgba(74,158,85,0.48); color: var(--green-light); }
+  .db-status { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; margin-bottom: 1rem; }
+  .db-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .db-dot.live { background: #4a9e55; animation: pulse 2s infinite; }
+  .db-dot.offline { background: #b85c2a; }
+  .db-dot.loading { background: #c9952b; animation: pulse 1s infinite; }
+
+  .tips { background: var(--earth-pale); }
+  .tips-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 1.25rem; }
+  .tip-card { background: white; border-radius: 14px; padding: 1.5rem; border: 1px solid rgba(122,92,60,0.1); transition: transform 0.2s; }
+  .tip-card:hover { transform: translateY(-2px); }
+  .tip-num { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 700; color: rgba(122,92,60,0.14); line-height: 1; margin-bottom: 0.75rem; }
+  .tip-card h4 { font-size: 0.92rem; font-weight: 500; color: var(--earth-dark); margin-bottom: 0.35rem; }
+  .tip-card p { font-size: 0.8rem; color: var(--text-light); line-height: 1.65; }
+  .tip-impact { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.75rem; font-size: 0.7rem; font-weight: 500; color: var(--green-mid); background: var(--green-pale); padding: 0.2rem 0.6rem; border-radius: 2rem; }
+
+  .newsletter { background: var(--warm-white); text-align: center; }
+  .newsletter-inner { max-width: 520px; margin: 0 auto; }
+  .newsletter .section-title { font-size: 2rem; }
+  .newsletter .section-sub { margin: 0 auto 2rem; }
+  .nl-form { display: flex; gap: 0.75rem; max-width: 420px; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
+  .nl-form input { flex: 1; min-width: 200px; padding: 0.8rem 1.25rem; border-radius: 2rem; border: 1px solid rgba(45,106,52,0.18); background: white; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text-dark); outline: none; transition: border-color 0.2s; }
+  .nl-form input:focus { border-color: var(--green-mid); }
+  .nl-form input::placeholder { color: var(--text-light); }
+  .nl-form button { background: var(--green-mid); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+  .nl-form button:hover { background: var(--green-deep); }
+  .nl-success { display: none; color: var(--green-mid); font-weight: 500; font-size: 0.95rem; margin-top: 1rem; }
+
+  footer { background: var(--green-deep); color: rgba(253,250,244,0.5); padding: 3rem 2.5rem 2rem; }
+  .footer-inner { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: var(--cream); text-decoration: none; }
+  .footer-logo span { color: var(--green-light); }
+  .footer-tagline { font-size: 0.8rem; margin-top: 0.35rem; color: rgba(253,250,244,0.35); }
+  .footer-links-group h6 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(253,250,244,0.55); font-weight: 500; margin-bottom: 0.75rem; }
+  .footer-links-group a { display: block; font-size: 0.84rem; color: rgba(253,250,244,0.38); text-decoration: none; margin-bottom: 0.4rem; transition: color 0.2s; }
+  .footer-links-group a:hover { color: rgba(253,250,244,0.78); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; flex-wrap: wrap; gap: 0.5rem; }
+  .footer-bottom a { color: var(--green-light); text-decoration: none; }
+
+  @media (max-width:700px) {
+    nav { padding:1rem 1.25rem; } .nav-links { display:none; } .nav-hamburger { display:flex; }
+    section { padding:3.5rem 1.25rem; } .hero { padding:7rem 1.25rem 4rem; } .hero-circles { display:none; }
+    .hero-stats { gap:1.5rem; } footer { padding:2.5rem 1.25rem 1.5rem; }
+    .discuss-text h5 { max-width:42vw; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="main-nav">
+  <a href="#" class="nav-logo">Planet<span>Talks</span></a>
+  <ul class="nav-links">
+    <li><a href="#news">News</a></li>
+    <li><a href="#community">Discussions</a></li>
+    <li><a href="#tips">Take Action</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#newsletter" class="nav-cta">Join us</a></li>
+  </ul>
+  <div class="nav-hamburger" onclick="toggleMobileNav()"><span></span><span></span><span></span></div>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="#news" onclick="closeMobileNav()">News</a>
+  <a href="#community" onclick="closeMobileNav()">Discussions</a>
+  <a href="#tips" onclick="closeMobileNav()">Take Action</a>
+  <a href="#newsletter" onclick="closeMobileNav()">Join us</a>
+</div>
+
+<section class="hero" id="about">
+  <div class="hero-bg"></div>
+  <div class="hero-circles"></div>
+  <div class="hero-content">
+    <div class="hero-tag"><div class="hero-dot"></div>Climate action starts here</div>
+    <h1>One planet.<br><em>Our</em> responsibility.</h1>
+    <p>PlanetTalks is a community-powered space to learn, discuss, and act on climate change — because humanity caused this, and humanity can change it.</p>
+    <div class="hero-actions">
+      <a href="#community" class="btn-primary">Join the conversation →</a>
+      <a href="#news" class="btn-secondary">Explore news</a>
+    </div>
+    <div class="hero-stats">
+      <div><div class="stat-num">1.5°</div><div class="stat-label">Critical threshold</div></div>
+      <div><div class="stat-num">8B</div><div class="stat-label">People affected</div></div>
+      <div><div class="stat-num">Now</div><div class="stat-label">Time to act</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="section-tag">What we offer</div>
+  <div class="section-title">Everything you need<br>to make a difference</div>
+  <p class="section-sub">From the latest WMO science to local action guides — PlanetTalks brings it all together in one place.</p>
+  <div class="features-grid">
+    <div class="feature-card"><div class="feature-icon icon-green">🌍</div><h3>Science & News</h3><p>Curated updates from WMO, IPCC, and climate scientists. Clear, honest reporting without the noise.</p></div>
+    <div class="feature-card"><div class="feature-icon icon-earth">💬</div><h3>Community Talks</h3><p>Join live discussions, share your perspective, and connect with changemakers from around the world.</p></div>
+    <div class="feature-card"><div class="feature-icon icon-rust">🌱</div><h3>Personal Action</h3><p>Simple, high-impact steps you can take today — from diet and transport to energy and advocacy.</p></div>
+  </div>
+</section>
+
+<section class="news" id="news">
+  <div class="section-tag">Latest updates</div>
+  <div class="section-title">News & science</div>
+  <p class="section-sub">What the world's climate data is telling us right now.</p>
+  <div class="news-grid">
+    <div class="news-card"><div class="news-img news-img-1"><span class="news-cat">Science</span></div><div class="news-body"><h4>WMO confirms 2024 was the hottest year on record</h4><p>Global surface temperatures reached new highs, driven primarily by greenhouse gas emissions from human activity.</p><div class="news-meta"><span>3 days ago</span><a href="https://wmo.int" class="news-read">Read more →</a></div></div></div>
+    <div class="news-card"><div class="news-img news-img-2"><span class="news-cat">Africa</span></div><div class="news-body"><h4>Southern Africa faces intensifying drought cycles</h4><p>Water scarcity is accelerating across Namibia, Botswana and Zimbabwe, threatening food security and livelihoods.</p><div class="news-meta"><span>1 week ago</span><a href="#" class="news-read">Read more →</a></div></div></div>
+    <div class="news-card"><div class="news-img news-img-3"><span class="news-cat">Solutions</span></div><div class="news-body"><h4>Renewable energy in Africa: a continent on the rise</h4><p>Solar and wind capacity is growing faster here than any other region — and communities are leading the way.</p><div class="news-meta"><span>2 weeks ago</span><a href="#" class="news-read">Read more →</a></div></div></div>
+  </div>
+</section>
+
+<section class="community" id="community">
+  <div class="community-bg"></div>
+  <div class="section-tag">Community</div>
+  <div class="section-title">Active discussions</div>
+  <p class="section-sub">Post a topic, join a conversation, and help drive real change — together.</p>
+  <div class="discuss-zone">
+    <div class="db-status">
+      <div class="db-dot loading" id="db-dot"></div>
+      <span id="db-label" style="color:rgba(253,250,244,0.4);">Connecting...</span>
+    </div>
+    <div class="discuss-form">
+      <div class="discuss-form-row">
+        <input class="discuss-input" id="d-name" placeholder="Your name" style="max-width:180px;" />
+        <select class="discuss-select" id="d-cat">
+          <option value="General">General</option>
+          <option value="Energy & Tech">Energy & Tech</option>
+          <option value="Action & Advocacy">Action & Advocacy</option>
+          <option value="Science & Research">Science & Research</option>
+          <option value="Local Issues">Local Issues</option>
+          <option value="Food & Water">Food & Water</option>
+        </select>
+      </div>
+      <textarea class="discuss-textarea" id="d-topic" placeholder="What do you want the community to discuss?"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:0.75rem;">
+        <button class="discuss-submit" id="d-submit" onclick="postDiscussion()">Post discussion</button>
+      </div>
+    </div>
+    <div class="discuss-count" id="d-count">Loading...</div>
+    <div class="discuss-list" id="d-list"><div style="text-align:center;padding:2rem;color:rgba(253,250,244,0.3);font-size:0.88rem;">Loading discussions...</div></div>
+  </div>
+</section>
+
+<section class="tips" id="tips">
+  <div class="section-tag">Take action</div>
+  <div class="section-title">Changes you can make today</div>
+  <p class="section-sub">Individual action multiplied by millions becomes collective change. Start small, start now.</p>
+  <div class="tips-grid">
+    <div class="tip-card"><div class="tip-num">01</div><h4>Eat less red meat</h4><p>Livestock farming is a major source of methane. Even one meat-free day per week has real impact.</p><div class="tip-impact">↑ High impact</div></div>
+    <div class="tip-card"><div class="tip-num">02</div><h4>Go solar at home</h4><p>Namibia has some of the highest solar potential on earth. Even small panels can power a household.</p><div class="tip-impact">↑ High impact</div></div>
+    <div class="tip-card"><div class="tip-num">03</div><h4>Cut single-use plastics</h4><p>Carry a reusable bag, bottle, and container. Refuse plastic straws. These habits add up fast.</p><div class="tip-impact">↑ Medium impact</div></div>
+    <div class="tip-card"><div class="tip-num">04</div><h4>Save water daily</h4><p>In a water-scarce country like Namibia, every litre matters. Fix leaks, shower shorter, reuse water.</p><div class="tip-impact">↑ High impact</div></div>
+    <div class="tip-card"><div class="tip-num">05</div><h4>Talk about it</h4><p>Share what you know with friends, family, and your community. Conversation is how culture shifts.</p><div class="tip-impact">↑ Highest impact</div></div>
+    <div class="tip-card"><div class="tip-num">06</div><h4>Support local, buy less</h4><p>Reduce consumption and choose locally made goods. Less shipping, less packaging, more community.</p><div class="tip-impact">↑ Medium impact</div></div>
+  </div>
+</section>
+
+<section class="newsletter" id="newsletter">
+  <div class="newsletter-inner">
+    <div class="section-tag">Stay informed</div>
+    <div class="section-title">Join PlanetTalks</div>
+    <p class="section-sub">Get weekly climate updates, discussion highlights, and action tips — straight to your inbox.</p>
+    <div class="nl-form">
+      <input type="email" id="nl-email" placeholder="Your email address" />
+      <button onclick="subscribeNewsletter()">Subscribe</button>
+    </div>
+    <div class="nl-success" id="nl-success">You're in! Welcome to the community 🌱</div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div><a href="#" class="footer-logo">Planet<span>Talks</span></a><div class="footer-tagline">One planet. Our responsibility.</div></div>
+    <div class="footer-links-group"><h6>Explore</h6><a href="#news">News & Science</a><a href="#community">Community</a><a href="#tips">Take Action</a></div>
+    <div class="footer-links-group"><h6>Platform</h6><a href="#about">About Us</a><a href="#newsletter">Newsletter</a><a href="mailto:hello@planettalks.org">Contact</a></div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 PlanetTalks. Built for the planet.</span>
+    <span><a href="#">Privacy</a> · <a href="#">Terms</a></span>
+  </div>
+</footer>
+
+<script>
+
+  const SUPABASE_URL = 'https://planettalks.supabase.co';
+  const SUPABASE_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3bHF6a3h4YXp4Y2ppbXB3dWFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MTc2NjMsImV4cCI6MjA5MDk5MzY2M30.7TBoRXMEZ-j3hzrernnzONW2Ky85qMlRxoyP-DCjSF8';
+  /* ============================================================ */
+
+  const isConfigured = SUPABASE_URL !== 'YOUR_PROJECT_URL' && SUPABASE_KEY !== 'YOUR_ANON_KEY';
+  let sb = null;
+  let likedIds = [];
+  try { likedIds = JSON.parse(localStorage.getItem('pt_liked') || '[]'); } catch(e) {}
+  let localPosts = [];
+  let nextLocalId = 1000;
+  const avClasses = ['av-a','av-b','av-c','av-d'];
+  const avMap = {};
+
+  const seedPosts = [
+    { id:'s1', name:'Talia M.', topic:'How can we reduce plastic use in everyday Namibian life?', category:'General', replies:48, likes:12, created_at: new Date(Date.now()-3*3600000).toISOString() },
+    { id:'s2', name:'James K.', topic:'Is solar energy realistic for low-income households?', category:'Energy & Tech', replies:31, likes:9, created_at: new Date(Date.now()-6*3600000).toISOString() },
+    { id:'s3', name:'Nadia B.', topic:'What can youth actually do to pressure governments?', category:'Action & Advocacy', replies:67, likes:21, created_at: new Date(Date.now()-86400000).toISOString() },
+    { id:'s4', name:'Lena O.', topic:'The link between climate change and food insecurity in Africa', category:'Science & Research', replies:22, likes:7, created_at: new Date(Date.now()-172800000).toISOString() }
+  ];
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function getAv(name, isOwn) {
+    if (isOwn) return 'av-you';
+    if (!avMap[name]) avMap[name] = avClasses[Object.keys(avMap).length % avClasses.length];
+    return avMap[name];
+  }
+
+  function getInitials(name) { return name.trim().split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'YO'; }
+
+  function timeAgo(d) {
+    const s = (Date.now()-new Date(d))/1000;
+    if (s<60) return 'just now';
+    if (s<3600) return Math.floor(s/60)+'m ago';
+    if (s<86400) return Math.floor(s/3600)+'h ago';
+    return Math.floor(s/86400)+'d ago';
+  }
+
+  function setStatus(state) {
+    const dot = document.getElementById('db-dot');
+    const lbl = document.getElementById('db-label');
+    dot.className = 'db-dot ' + state;
+    if (state==='live') { lbl.textContent='Live — posts are shared with everyone'; lbl.style.color='rgba(74,158,85,0.8)'; }
+    else if (state==='offline') { lbl.textContent='Add Supabase credentials to enable live posts'; lbl.style.color='rgba(184,92,42,0.7)'; }
+    else { lbl.textContent='Connecting...'; lbl.style.color='rgba(253,250,244,0.4)'; }
+  }
+
+  function renderPosts(posts) {
+    const list = document.getElementById('d-list');
+    const countEl = document.getElementById('d-count');
+    countEl.textContent = posts.length + ' discussion' + (posts.length!==1?'s':'');
+    if (!posts.length) { list.innerHTML='<div style="text-align:center;padding:2rem;color:rgba(253,250,244,0.3);font-size:0.88rem;">No discussions yet — be the first to post!</div>'; return; }
+    list.innerHTML = posts.map(p => {
+      const id = p.id || p.localId;
+      const av = getAv(p.name, p.isOwn);
+      const liked = likedIds.includes(String(id));
+      const time = p.created_at ? timeAgo(p.created_at) : 'just now';
+      return `<div class="discuss-item ${p.isNew?'new-post':''}" id="post-${id}">
+        <div class="discuss-left">
+          <div class="discuss-avatar ${av}">${esc(getInitials(p.name))}</div>
+          <div class="discuss-text">
+            <h5 title="${esc(p.topic)}">${esc(p.topic)}</h5>
+            <span class="meta">By ${esc(p.name)} &middot; <span class="cat-badge">${esc(p.category)}</span> &middot; ${time}</span>
+          </div>
+        </div>
+        <div class="discuss-right">
+          <div class="discuss-stat"><div class="num">${p.replies||0}</div><div class="lbl">Replies</div></div>
+          <button class="like-btn ${liked?'liked':''}" onclick="toggleLike('${id}',${p.likes||0},${liked})">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 14s-6-3.9-6-8a4 4 0 0 1 6-3.44A4 4 0 0 1 14 6c0 4.1-6 8-6 8z"/></svg>
+            ${p.likes||0}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function toggleLike(id, currentLikes, isLiked) {
+    const newLiked = !isLiked;
+    const newCount = Math.max(0, currentLikes + (newLiked?1:-1));
+    likedIds = newLiked ? [...likedIds, String(id)] : likedIds.filter(x=>x!==String(id));
+    try { localStorage.setItem('pt_liked', JSON.stringify(likedIds)); } catch(e){}
+    if (sb && isConfigured) {
+      try { await sb.from('discussions').update({likes:newCount}).eq('id',id); } catch(e){}
+      await loadPosts();
+    } else {
+      const p = localPosts.find(x=>String(x.id)===String(id)||String(x.localId)===String(id));
+      if (p) { p.likes=newCount; renderPosts(localPosts); }
+    }
+  }
+
+  async function loadPosts() {
+    if (!sb||!isConfigured) { renderPosts(localPosts); return; }
+    try {
+      const {data,error} = await sb.from('discussions').select('*').order('created_at',{ascending:false}).limit(50);
+      if (error) throw error;
+      renderPosts(data||[]);
+    } catch(e) { renderPosts(localPosts); }
+  }
+
+  async function postDiscussion() {
+    const name = document.getElementById('d-name').value.trim();
+    const topic = document.getElementById('d-topic').value.trim();
+    const category = document.getElementById('d-cat').value;
+    if (!name) { flashErr('d-name'); return; }
+    if (!topic) { flashErr('d-topic'); return; }
+    const btn = document.getElementById('d-submit');
+    btn.disabled=true; btn.textContent='Posting...';
+    if (sb&&isConfigured) {
+      try {
+        const {error} = await sb.from('discussions').insert([{name,topic,category,likes:0,replies:0}]);
+        if (error) throw error;
+        document.getElementById('d-name').value='';
+        document.getElementById('d-topic').value='';
+        await loadPosts();
+        const first = document.getElementById('d-list').firstElementChild;
+        if (first) { first.classList.add('new-post'); setTimeout(()=>first.classList.remove('new-post'),2500); }
+      } catch(e) { alert('Could not post. Check your Supabase credentials in the HTML file.'); }
+    } else {
+      const lid = nextLocalId++;
+      localPosts.unshift({localId:lid,id:lid,name,topic,category,likes:0,replies:0,created_at:new Date().toISOString(),isOwn:true,isNew:true});
+      document.getElementById('d-name').value='';
+      document.getElementById('d-topic').value='';
+      renderPosts(localPosts);
+      setTimeout(()=>{ const el=document.getElementById('post-'+lid); if(el) el.classList.remove('new-post'); },2500);
+    }
+    btn.disabled=false; btn.textContent='Post discussion';
+  }
+
+  function flashErr(id) {
+    const el=document.getElementById(id);
+    el.style.borderColor='rgba(184,92,42,0.7)'; el.focus();
+    setTimeout(()=>{ el.style.borderColor=''; },1400);
+  }
+
+  function subscribeNewsletter() {
+    const email=document.getElementById('nl-email').value.trim();
+    if (!email||!email.includes('@')) { document.getElementById('nl-email').style.borderColor='rgba(184,92,42,0.5)'; setTimeout(()=>{ document.getElementById('nl-email').style.borderColor=''; },1400); return; }
+    document.querySelector('.nl-form').style.display='none';
+    document.getElementById('nl-success').style.display='block';
+  }
+
+  function toggleMobileNav() { document.getElementById('nav-mobile').classList.toggle('open'); }
+  function closeMobileNav() { document.getElementById('nav-mobile').classList.remove('open'); }
+  window.addEventListener('scroll',()=>{ document.getElementById('main-nav').classList.toggle('scrolled',window.scrollY>40); });
+
+  async function init() {
+    if (isConfigured) {
+      try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        await loadPosts();
+        setStatus('live');
+      } catch(e) {
+        sb=null; localPosts=JSON.parse(JSON.stringify(seedPosts));
+        renderPosts(localPosts); setStatus('offline');
+      }
+    } else {
+      localPosts=JSON.parse(JSON.stringify(seedPosts));
+      renderPosts(localPosts); setStatus('offline');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
